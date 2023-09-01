@@ -1,12 +1,32 @@
 import { launch } from 'puppeteer';
 
+ async function startBrowserWithProxy(proxyServer){
+	let browserWithProxy;
+	try {
+	    console.log(`Opening the browser with ${proxyServer} ......`);
+	    browserWithProxy = await launch({
+	        headless: 'new',
+	        args: [
+				"--disable-setuid-sandbox",
+				`--proxy-server=${proxyServer}`,
+			],
+	        'ignoreHTTPSErrors': true
+	    });
+	} catch (err) {
+	    console.log("Could not create a browser instance => : ", err);
+	}
+	return browserWithProxy;
+}
+
 async function startBrowser(){
 	let browser;
 	try {
-	    console.log("Opening the browser......");
+	    console.log(`Opening the browser with no proxy ......`);
 	    browser = await launch({
 	        headless: 'new',
-	        args: ["--disable-setuid-sandbox"],
+	        args: [
+				"--disable-setuid-sandbox",
+			],
 	        'ignoreHTTPSErrors': true
 	    });
 	} catch (err) {
@@ -15,4 +35,4 @@ async function startBrowser(){
 	return browser;
 }
 
-export default startBrowser;
+export {startBrowser , startBrowserWithProxy};

@@ -8,15 +8,12 @@ const mangaScraperObject = {
     async scraper(browser){
 		let page = await browser.newPage();
         await page.setViewport({ width: 1366, height: 768 });
-
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36');
-
         await page.setExtraHTTPHeaders({
             'Accept':'*/*',
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding':'gzip, deflate, br',
             'Referer': 'https://www.google.com/',
-            // Add more headers as needed
         });
         
         function randomDelay(min, max) {
@@ -39,10 +36,19 @@ const mangaScraperObject = {
         
         const limit = pLimit(concurrencyLimit);
 
-		async function mangaPagePromise(link) {
+		async function scrapeMangaWithProxy(link) {
             return limit(async () => {
                 const dataObj = {};
                 const newPage = await browser.newPage();
+                await newPage.setViewport({ width: 1366, height: 768 });
+
+                await newPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36');
+                await newPage.setExtraHTTPHeaders({
+                    'Accept':'*/*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding':'gzip, deflate, br',
+                    'Referer': 'https://www.google.com/',
+                });
                 console.log(`Navigating to ${link}...`);
                 await newPage.goto(link);
 
@@ -53,7 +59,12 @@ const mangaScraperObject = {
                 dataObj['Genres'] = await newPage.$$eval('.tab-summary .post-content > div:nth-child(8) a', anchors => {
                     return anchors.map(anchor => anchor.textContent);
                 });
-                dataObj['ChaptersUrls'] = await newPage.$$eval('.list-item.box-list-chapter.limit-height li a', anchors => {
+                dataObj.Chapters = {};
+                dataObj['Chapters']['ChapterNumber'] = await newPage.$$eval('.list-item.box-list-chapter.limit-height li a', anchors => {
+                    var regex = /[+-]?\d+(\.\d+)?/g;
+                    return anchors.map(anchor => anchor.textContent.match(regex).map(function(v) { return parseFloat(v); }));
+                });
+                dataObj['Chapters']['ChapterLink'] = await newPage.$$eval('.list-item.box-list-chapter.limit-height li a', anchors => {
                     return anchors.map(anchor => anchor.href);
                 });
 
@@ -64,17 +75,13 @@ const mangaScraperObject = {
         }
 
         
-        const tasks = urls.map(link => mangaPagePromise(link));
+        const tasks = urls.map(link => scrapeMangaWithProxy(link));
 
         const results = await Promise.all(tasks);
 
         console.log('Saving data ...');
         fs.writeFileSync('results.json', JSON.stringify(results, null, 2));
         console.log('Data saved.');
-
-        await browser.close();
-
-        
 	}
     
 };
