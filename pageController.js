@@ -10,7 +10,8 @@ async function scrapeAll(browserInstance){
 
 		//let browserWithProxy = await startBrowserWithProxy(proxy);
 
-		await mangaScraperObject.scraper(browser);	
+		await mangaScraperObject.scraper(browser);
+			
 		await browser.close();
 	}
 	catch(err){
