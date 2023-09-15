@@ -7,6 +7,8 @@ const proxiesScraperObject = {
         let ip_addresses = [];
         let port_numbers = [];
 
+        console.log(`Navigating to ${this.url}...`);
+
         let page = await browser.newPage();
         await page.setViewport({ width: 1366, height: 768 });
 
@@ -19,8 +21,9 @@ const proxiesScraperObject = {
             'Referer': 'https://www.google.com/',
             // Add more headers as needed
         });
-		console.log(`Navigating to ${this.url}...`);
+        
         await page.goto(this.url);
+
         console.log(`Navigated to ${this.url}...`);
 
         const htmlContent = await page.content();

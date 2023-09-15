@@ -1,11 +1,17 @@
 import pLimit from 'p-limit';
-import fs from 'fs';
+import { load } from "cheerio";
+import fs, { readFileSync } from 'fs';
+import util from 'util';
+
 const concurrencyLimit = 3;
+const maxChaptersToScrape = 5;
+const maxMangaToScrape = 5;
 
 const mangaScraperObject = {
-    url: 'https://saytruyenhay.com/',
+    url: 'https://saytruyenmoi.com/',
+
     async scraper(browser){
-		let page = await browser.newPage();
+        let page = await browser.newPage();
         await page.setViewport({ width: 1366, height: 768 });
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36');
         await page.setExtraHTTPHeaders({
@@ -14,83 +20,136 @@ const mangaScraperObject = {
             'Accept-Encoding':'gzip, deflate, br',
             'Referer': 'https://www.google.com/',
         });
-        
-        function randomDelay(min, max) {
-            return Math.floor(Math.random() * (max - min + 1)) + min;
-        }
 
-		console.log(`Navigating to ${this.url}...`);
-		await page.goto(this.url);
+        await page.goto(this.url);
+
+        const pageContent = await page.content();
+        const $a = load(pageContent);
+
         console.log(`Navigated to ${this.url}...`);
 
-        const delay = randomDelay(2000, 5000);
-        console.log(`Delaying for ${delay}ms...`);
-        await page.waitForTimeout(delay);
+        const urls = $a('.manga-content .page-item-detail > div:first-of-type a')
+            .map((index, el) => $a(el).attr('href')).get()
+            .slice(0, maxMangaToScrape);
 
-        await page.waitForSelector('.manga-content');
-
-        const urls = await page.$$eval('.manga-content .page-item-detail > div:first-of-type a', links => {
-            return links.map(link => link.href);
-        });
-        
         const limit = pLimit(concurrencyLimit);
 
-		async function scrapeManga(link) {
+        const scrapedMangaData = loadScrapedMangaData();
+
+        async function scrapeManga(link) {
             return limit(async () => {
-                const newPage = await browser.newPage();
-                await newPage.goto(link);
+                const mangaPage = await browser.newPage();
+                await mangaPage.goto(link);
+
+                const mangaHtmlContent = await mangaPage.content();
+                const $b = load(mangaHtmlContent);
+
                 console.log(`Navigated to ${link}...`);
-                const dataObj = {
-                    MangaTitle: await newPage.$eval('.post-title > h1', text => text.textContent),
-                    MangaDescription: await newPage.$eval('.description-summary p', text => text.textContent),
-                    CoverImageUrl: await newPage.$eval('.summary_image img', img => img.src),
-                    Author: await newPage.$eval('.tab-summary .post-content > div:nth-child(5) > div:nth-child(2)', text => text.textContent),
-                    Genres: await newPage.$$eval('.tab-summary .post-content > div:nth-child(8) a', anchors => anchors.map(anchor => anchor.textContent)),
-                    Chapters: await newPage.$$eval(
-                        '.list-item.box-list-chapter.limit-height li a',
-                        async (anchors) => {
-                            const chapterNumbers = anchors.map(anchor => anchor.textContent);
-                            const chapterLinks = anchors.map(anchor => anchor.href);
-                    
-                            return chapterNumbers.map((chapterNumber, index) => ({
-                                ChapterNumber: chapterNumber,
-                                ChapterLink: chapterLinks[index],
-                            }));
-                        },
-                    )
+
+                const mangaData = {
+                    MangaTitle: $b('.post-title > h1').text(),
+                    MangaDescription: $b('.description-summary p').text(),
+                    CoverImageUrl: $b('.summary_image img').attr('src'),
+                    Author: $b('.tab-summary .post-content > div:nth-child(5) > div:nth-child(2)').text(),
+                    Genres: $b('.tab-summary .post-content > div:nth-child(8) a').map((index, el) => $b(el).text()).get(),
+                    Chapters: $b('.list-item.box-list-chapter.limit-height li a').map((index, el) => {
+                        const chapterNumber = $b(el).text();
+                        const chapterLink = $b(el).attr('href');
+                        return {
+                            ChapterNumber: chapterNumber,
+                            ChapterLink: chapterLink,
+                        };
+                    }).get(),
                 };
-                await newPage.close();
 
-                const chapterURLs = dataObj.Chapters.map(chapter => chapter.ChapterLink);
+                await mangaPage.close();
+                  
+                // Load the scraped manga data and check if the manga has been scraped already
+                if (scrapedMangaData[mangaData.MangaTitle]) {
+                    console.log(`Manga ${mangaData.MangaTitle} is already scraped. Checking for new chapters...`);
 
-                for (const chapUrl of chapterURLs) {
-                    const chapterPage = await browser.newPage();
-                    await chapterPage.goto(chapUrl);
-                    console.log(`Navigated to ${chapUrl}...`);
-                    const chapterImageURLs = await chapterPage.$$eval('.page-break img', imgs => imgs.map((img) => img.src));
-                    await chapterPage.close();
-                    
-                    // Find the corresponding chapter in dataObj.Chapters and add the image URLs
-                    const chapterIndex = dataObj.Chapters.findIndex(chapter => chapter.ChapterLink === chapUrl);
-                    if (chapterIndex !== -1) {
-                        dataObj.Chapters[chapterIndex].ChapterImageURLs = chapterImageURLs;
+                    // Filter out already scraped chapters
+                    mangaData.Chapters = mangaData.Chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].includes(chapter.ChapterNumber));
+
+                    if (mangaData.Chapters.length === 0) {
+                        console.log(`No new chapters found for ${mangaData.MangaTitle}.`);
+                        return null; // No new chapters to scrape
                     }
                 }
 
-                console.log('== Manga %s scraped successfully. ==', dataObj.MangaTitle);
-                return dataObj;
+                // Limit the number of chapters to scrape
+                mangaData.Chapters = mangaData.Chapters.slice(0, maxChaptersToScrape);
+
+                const chapterURLs = mangaData.Chapters.map(chapter => chapter.ChapterLink);
+
+                let chapterCounter = 0;
+
+                for (const chapUrl of chapterURLs) {
+                    const chapterPage = await browser.newPage();
+
+                    await chapterPage.setDefaultNavigationTimeout(300000);
+
+                    await chapterPage.goto(chapUrl);
+
+                    const chapterHtmlContent = await chapterPage.content();
+                    const $c = load(chapterHtmlContent);
+
+                    const chapterImageURLs = $c('.page-break > img').map((index, el) => $c(el).attr('src')).get();
+
+                    chapterCounter++;
+                    console.log('+ Scraped chapter %d for %s, number of image links: %d', chapterCounter, mangaData.MangaTitle, chapterImageURLs.length);
+
+                    await chapterPage.close();
+
+                    // Find the corresponding chapter in mangaData.Chapters and add the image URLs
+                    const chapterIndex = mangaData.Chapters.findIndex(chapter => chapter.ChapterLink === chapUrl);
+
+                    if (chapterIndex !== -1) {
+                        mangaData.Chapters[chapterIndex].ChapterImageURLs = chapterImageURLs;
+                    }
+
+                    // Record scraped chapter in the scrapedMangaData
+                    if (!scrapedMangaData[mangaData.MangaTitle]) {
+                        scrapedMangaData[mangaData.MangaTitle] = [];
+                    }
+                    scrapedMangaData[mangaData.MangaTitle].push(mangaData.Chapters[chapterIndex].ChapterNumber);
+                }
+
+                console.log('== Manga %s scraped successfully. ==', mangaData.MangaTitle);
+                return mangaData;
             });
         }
-        
-        const tasks = urls.map(link => scrapeManga(link));
 
+        const tasks = urls.map(link => scrapeManga(link));
         const results = await Promise.all(tasks);
 
         console.log('Saving data ...');
-        fs.writeFileSync('results.json', JSON.stringify(results, null, 2));
+        fs.writeFileSync('results.json', JSON.stringify(results.filter(result => result !== null), null, 2)); // Filter out null results (no new chapters)
         console.log('Data saved.');
-	}
-    
+    }
 };
+
+
+const scrapedMangaDataFile = 'results.json';
+
+function loadScrapedMangaData() {
+    try {
+        const data = readFileSync(scrapedMangaDataFile);
+        const mangaArray = JSON.parse(data);
+        
+        // Convert the array into an object with manga titles as keys
+        const mangaDataObject = {};
+        mangaArray.forEach((manga) => {
+            if (manga.MangaTitle) {
+                mangaDataObject[manga.MangaTitle] = manga;
+            }
+        });
+
+        return mangaDataObject;
+    } catch (error) {
+        return {};
+    }
+}
+
 
 export { mangaScraperObject };
