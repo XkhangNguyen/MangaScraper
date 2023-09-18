@@ -1,11 +1,10 @@
 import pLimit from 'p-limit';
 import { load } from "cheerio";
 import fs, { readFileSync } from 'fs';
-import util from 'util';
 
-const concurrencyLimit = 3;
-const maxChaptersToScrape = 5;
-const maxMangaToScrape = 5;
+const concurrencyLimit = 2;
+const maxChaptersToScrape = 2;
+const maxMangaToScrape = 2;
 
 const mangaScraperObject = {
     url: 'https://saytruyenmoi.com/',
@@ -38,6 +37,7 @@ const mangaScraperObject = {
 
         async function scrapeManga(link) {
             return limit(async () => {
+                console.log(`Navigating to ${link}...`);
                 const mangaPage = await browser.newPage();
                 await mangaPage.goto(link);
 
@@ -63,31 +63,45 @@ const mangaScraperObject = {
                 };
 
                 await mangaPage.close();
-                  
+                
                 // Load the scraped manga data and check if the manga has been scraped already
-                if (scrapedMangaData[mangaData.MangaTitle]) {
+                if (scrapedMangaData[mangaData.MangaTitle]){
                     console.log(`Manga ${mangaData.MangaTitle} is already scraped. Checking for new chapters...`);
-
+                    // scrapedMangaData[mangaData.MangaTitle].Chapters.forEach(chapter => {
+                        //     console.log(chapter.ChapterNumber);
+                        // });
+                        // console.log("\n")
+                        
                     // Filter out already scraped chapters
-                    mangaData.Chapters = mangaData.Chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].includes(chapter.ChapterNumber));
+                    mangaData.Chapters = mangaData.Chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].Chapters.some(chap => chap.ChapterNumber === chapter.ChapterNumber));
+                    
+                    // mangaData.Chapters.forEach(chapter => {
+                    //     console.log(chapter.ChapterNumber);
+                    // });
 
                     if (mangaData.Chapters.length === 0) {
                         console.log(`No new chapters found for ${mangaData.MangaTitle}.`);
-                        return null; // No new chapters to scrape
+                        return scrapedMangaData[mangaData.MangaTitle]; // No new chapters to scrape
+                    }
+                    else{
+                        console.log(`Found new chapters for ${mangaData.MangaTitle}.`);
+
                     }
                 }
+                else{
+                    console.log(`Manga ${mangaData.MangaTitle} is not scraped. Scraping for all chapters...`);
+                }
+                
 
                 // Limit the number of chapters to scrape
                 mangaData.Chapters = mangaData.Chapters.slice(0, maxChaptersToScrape);
-
+                
                 const chapterURLs = mangaData.Chapters.map(chapter => chapter.ChapterLink);
 
                 let chapterCounter = 0;
 
                 for (const chapUrl of chapterURLs) {
                     const chapterPage = await browser.newPage();
-
-                    await chapterPage.setDefaultNavigationTimeout(300000);
 
                     await chapterPage.goto(chapUrl);
 
@@ -110,21 +124,32 @@ const mangaScraperObject = {
 
                     // Record scraped chapter in the scrapedMangaData
                     if (!scrapedMangaData[mangaData.MangaTitle]) {
-                        scrapedMangaData[mangaData.MangaTitle] = [];
+                        scrapedMangaData[mangaData.MangaTitle] = {...mangaData};
+                        scrapedMangaData[mangaData.MangaTitle].Chapters = [];
                     }
-                    scrapedMangaData[mangaData.MangaTitle].push(mangaData.Chapters[chapterIndex].ChapterNumber);
+
+                    scrapedMangaData[mangaData.MangaTitle].Chapters.push(mangaData.Chapters[chapterIndex]);
                 }
 
                 console.log('== Manga %s scraped successfully. ==', mangaData.MangaTitle);
-                return mangaData;
+
+                return scrapedMangaData[mangaData.MangaTitle];
             });
         }
 
         const tasks = urls.map(link => scrapeManga(link));
-        const results = await Promise.all(tasks);
+        const results = (await Promise.all(tasks)).filter(result => result !== null);
+        
+        const mangaDataObject = {};
+
+        results.forEach((manga) => {
+            if (manga.MangaTitle) {
+                mangaDataObject[manga.MangaTitle] = manga;
+            }
+        });
 
         console.log('Saving data ...');
-        fs.writeFileSync('results.json', JSON.stringify(results.filter(result => result !== null), null, 2)); // Filter out null results (no new chapters)
+        fs.writeFileSync('results.json', JSON.stringify(mangaDataObject, null, 2)); // Filter out null results (no new chapters)
         console.log('Data saved.');
     }
 };
@@ -137,15 +162,7 @@ function loadScrapedMangaData() {
         const data = readFileSync(scrapedMangaDataFile);
         const mangaArray = JSON.parse(data);
         
-        // Convert the array into an object with manga titles as keys
-        const mangaDataObject = {};
-        mangaArray.forEach((manga) => {
-            if (manga.MangaTitle) {
-                mangaDataObject[manga.MangaTitle] = manga;
-            }
-        });
-
-        return mangaDataObject;
+        return mangaArray;
     } catch (error) {
         return {};
     }
