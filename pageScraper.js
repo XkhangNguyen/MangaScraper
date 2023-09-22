@@ -1,6 +1,7 @@
     import pLimit from 'p-limit';
     import { load } from "cheerio";
     import fs, { readFileSync } from 'fs';
+    import { saveMangasToDatabase } from './saveDataToDB.js';
 
     const concurrencyLimit = 2;
     const maxChaptersToScrape = 5;
@@ -29,6 +30,7 @@
             
             (await Promise.all(tasks)).filter(result => result !== null);
             
+            await saveMangasToDatabase(scrapedMangaData);
             saveScrapedMangaData(scrapedMangaData);
         }
     };
