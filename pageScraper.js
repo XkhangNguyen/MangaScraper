@@ -3,9 +3,9 @@
     import fs, { readFileSync } from 'fs';
     import { saveMangasToDatabase } from './saveDataToDB.js';
 
-    const concurrencyLimit = 2;
-    const maxChaptersToScrape = 5;
-    const maxMangaToScrape = 1;
+    const concurrencyLimit = 3;
+    const maxChaptersToScrape = 2;
+    const maxMangaToScrape = 2;
 
     const scrapedMangaDataFile = 'results.json';
 
@@ -28,9 +28,10 @@
 
             const tasks = pageUrls.map(link => scrapeChapterDetailsFromLink(link, mainBrowser, scrapedMangaData));
             
-            (await Promise.all(tasks)).filter(result => result !== null);
-            
-            await saveMangasToDatabase(scrapedMangaData);
+            const results = (await Promise.all(tasks)).filter(result => result !== null);
+
+            await saveMangasToDatabase(results);
+
             saveScrapedMangaData(scrapedMangaData);
         }
     };
@@ -87,7 +88,7 @@
             };
             
             await mangaPage.close();
-            
+
             // Load the scraped manga data and check if the manga has been scraped already
             if (scrapedMangaData[mangaData.MangaTitle]){
                 console.log(`- Manga ${mangaData.MangaTitle} is already scraped. Checking for new chapters...`);
@@ -97,7 +98,7 @@
                 
                 if (mangaData.Chapters.length === 0) {
                     console.log(`-- No new chapters found for ${mangaData.MangaTitle}.`);
-                    return scrapedMangaData[mangaData.MangaTitle]; // No new chapters to scrape
+                    return null; // No new chapters to scrape
                 }
                 else{
                     console.log(`-- Found new chapters for ${mangaData.MangaTitle}.`);
@@ -144,7 +145,7 @@
             
             console.log('~ Manga %s scraped successfully.', mangaData.MangaTitle);
             
-            return scrapedMangaData[mangaData.MangaTitle];
+            return mangaData;
         });
     }
 
@@ -160,13 +161,13 @@
 
     function saveScrapedMangaData(results) {
         try {
-            // const mangaDataObject = {};
+            const mangaDataObject = {};
 
-            // results.forEach((manga) => {
-            //     if (manga.MangaTitle) {
-            //         mangaDataObject[manga.MangaTitle] = manga;
-            //     }
-            // });
+            results.forEach((manga) => {
+                if (manga.MangaTitle) {
+                    mangaDataObject[manga.MangaTitle] = manga;
+                }
+            });
 
             fs.writeFileSync('results.json', JSON.stringify(results, null, 2)); // Filter out null results (no new chapters)
             console.log('Data saved.');
