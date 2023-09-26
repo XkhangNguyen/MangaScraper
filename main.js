@@ -1,8 +1,8 @@
 import {startBrowser} from './browser.js';
+import { startService } from './service.js';
 import scraperController from './pageController.js';
 
-//Start the browser and create a browser instance
 let browserInstance = startBrowser();
+let serviceInstance = startService();
 
-// Pass the browser instance to the scraper controller
-scraperController(browserInstance)
+scraperController(browserInstance, serviceInstance);

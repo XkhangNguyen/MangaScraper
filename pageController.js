@@ -1,11 +1,13 @@
 import { mangaScraperObject } from './pageScraper.js';
 
-async function scrapeAll(browserInstance) {
+async function scrapeAll(browserInstance, serviceInstance) {
 	let browser;
+	let service;
 	try {
 		browser = await browserInstance;
+		service = serviceInstance;
 
-		await mangaScraperObject.scraper(browser);
+		await mangaScraperObject.scraper(browser, service);
 
 		await browser.close();
 	}
@@ -14,4 +16,4 @@ async function scrapeAll(browserInstance) {
 	}
 }
 
-export default (browserInstance) => scrapeAll(browserInstance)
+export default (browserInstance, serviceInstance) => scrapeAll(browserInstance, serviceInstance)

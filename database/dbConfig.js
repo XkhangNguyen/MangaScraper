@@ -13,12 +13,20 @@ const sequelize = new Sequelize({
   logging: false,
 });
 
-sequelize.authenticate()
+await sequelize.authenticate()
   .then(() => {
     console.log('Database connection has been established successfully.');
   })
   .catch((error) => {
     console.error('Unable to connect to the database:', error);
+  });
+
+await sequelize.sync()
+  .then(() => {
+    console.log('Database tables are synchronized.');
+  })
+  .catch((error) => {
+    console.error('Error synchronizing database tables:', error);
   });
 
 export default sequelize;

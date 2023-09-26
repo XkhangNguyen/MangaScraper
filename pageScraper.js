@@ -1,11 +1,13 @@
     import pLimit from 'p-limit';
     import { load } from "cheerio";
     import fs, { readFileSync } from 'fs';
-    import { saveMangasToDatabase } from './saveDataToDB.js';
+    import { saveMangasToDatabase } from './database/saveDataToDB.js';
+    import { loadMangasFromDatabase } from './database/loadDataFromDB.js';
+    import sequelize from './database/dbConfig.js';
 
     const concurrencyLimit = 3;
     const maxChaptersToScrape = 2;
-    const maxMangaToScrape = 2;
+    const maxMangaToScrape = 1;
 
     const scrapedMangaDataFile = 'results.json';
 
@@ -21,8 +23,8 @@
 
     const mangaScraperObject = {
 
-        async scraper(mainBrowser){
-            const scrapedMangaData = loadScrapedMangaData();
+        async scraper(mainBrowser, service){
+            const scrapedMangaData = convertToObject(await loadMangasFromDatabase(service));
 
             const pageUrls = await fetchWebsiteUrls(url, mainBrowser);
 
@@ -30,9 +32,9 @@
             
             const results = (await Promise.all(tasks)).filter(result => result !== null);
 
-            await saveMangasToDatabase(results);
+            await saveMangasToDatabase(results, service);
 
-            saveScrapedMangaData(scrapedMangaData);
+            sequelize.close();
         }
     };
 
@@ -149,32 +151,16 @@
         });
     }
 
-    function loadScrapedMangaData() {
-        try {
-            const data = readFileSync(scrapedMangaDataFile);
-            const mangaArray = JSON.parse(data);
-            return mangaArray;
-        } catch (error) {
-            return {};
-        }
+    function convertToObject(data){
+        const mangaDataObject = {};
+
+        data.forEach((manga) => {
+            if (manga.MangaTitle) {
+                mangaDataObject[manga.MangaTitle] = manga;
+            }
+        });
+
+        return mangaDataObject;
     }
-
-    function saveScrapedMangaData(results) {
-        try {
-            const mangaDataObject = {};
-
-            results.forEach((manga) => {
-                if (manga.MangaTitle) {
-                    mangaDataObject[manga.MangaTitle] = manga;
-                }
-            });
-
-            fs.writeFileSync('results.json', JSON.stringify(results, null, 2)); // Filter out null results (no new chapters)
-            console.log('Data saved.');
-        } catch (error) {
-            console.error('Error while saving data:', error.message);
-        }
-    }
-
 
     export { mangaScraperObject };

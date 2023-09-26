@@ -7,14 +7,84 @@ class MangaService{
     }
 
     async getAllManga() {
-        return await Manga.findAll({
-          include: [Genre, Chapter], // Include associated genres and chapters
-        });
+        return await this.models.manga.findAll();
     }
 
     async getMangaByTitle(mangaTitle){
-        return await this.models.manga.findOne({where: {title : mangaTitle}, });
+        return await this.models.manga.findOne({where: {title : mangaTitle}});
     }
+
+    async getGenreOfManga(mangaTitle) {
+        try {
+            // Find the manga record by title
+            const manga = await this.models.manga.findOne({
+                where: { title: mangaTitle },
+                include: [this.models.genre], // Include the associated genre
+            });
+
+            
+            if (!manga) {
+                throw new Error('Manga not found');
+            }
+            
+            // Access the genre associated with the manga
+            const genres = manga.genres;
+      
+            // Return the genre data
+            return genres;
+        }   catch (error) {
+            console.error('Error getting genres of manga:', error.message);
+            throw error;
+        }
+    }
+
+    async getChaptersOfManga(mangaTitle){
+        try{
+            const manga = await this.models.manga.findOne({
+                where: {title: mangaTitle},
+                include: [
+                    {
+                      model: this.models.chapter,
+                    },
+                  ],
+            })
+
+            if (!manga) {
+                throw new Error('Manga not found');
+            }
+
+            const chapters = manga.chapters;
+
+            return chapters;
+        }   catch (error) {
+            console.error('Error getting chapters of manga:', error.message);
+            throw error;
+        }
+    }
+
+    async getChapterImageURLsOfChapter(chapter) {
+        try {
+          // Find the chapter record by its ID, assuming chapter is a Sequelize instance
+          const chapterRecord = await chapter.reload({ include: 'chapter_images' });
+      
+          if (!chapterRecord) {
+            throw new Error('Chapter not found');
+          }
+      
+          // Access the associated chapter_images
+          const chapterImages = chapterRecord.chapter_images;
+      
+          // Extract image URLs from the chapter_images
+          const imageUrls = chapterImages.map((image) => image.chapter_image_url);
+
+          return imageUrls;
+        } catch (error) {
+          console.error('Error getting chapter image URLs:', error.message);
+          throw error;
+        }
+      }
+      
+      
       
     async createManga(mangaData) {
         try {
@@ -28,16 +98,16 @@ class MangaService{
             if (Genres && Genres.length > 0) {
                 const genreRecords = await Promise.all(
                     Genres.map(async (genreName) => {
-                    // Find or create the genre based on its name
-                    const [genre] = await this.models.genre.findOrCreate({
-                    where: { genre_name: genreName },
-                    });
-        
-                    // Associate the genre with the manga
-                    await manga.addGenre(genre);
-        
-                    return genre;
-                })
+                        // Find or create the genre based on its name
+                        const [genre] = await this.models.genre.findOrCreate({
+                        where: { genre_name: genreName },
+                        });
+            
+                        // Associate the genre with the manga
+                        await manga.addGenre(genre);
+            
+                        return genre;
+                    })
                 );
         
                 manga.setGenres(genreRecords); // Set genres for the manga
