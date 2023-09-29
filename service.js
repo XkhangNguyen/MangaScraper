@@ -13,4 +13,8 @@ function startService(){
     return service;
 }
 
-export {startService};
+function endService(){
+    sequelize.close();
+}
+
+export {startService, endService};

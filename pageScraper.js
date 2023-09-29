@@ -3,7 +3,7 @@
     import fs, { readFileSync } from 'fs';
     import { saveMangasToDatabase } from './database/saveDataToDB.js';
     import { loadMangasFromDatabase } from './database/loadDataFromDB.js';
-    import sequelize from './database/dbConfig.js';
+    import { endService } from './service.js';
 
     const concurrencyLimit = 3;
     const maxChaptersToScrape = 2;
@@ -34,7 +34,7 @@
 
             await saveMangasToDatabase(results, service);
 
-            sequelize.close();
+            endService();
         }
     };
 
