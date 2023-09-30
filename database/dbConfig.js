@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import Sequelize from 'sequelize';
+import Models from './models/index.js';
 
 dotenv.config();
 
@@ -18,6 +19,8 @@ const sequelize = new Sequelize({
     }
   },
 });
+
+Models(sequelize);
 
 await sequelize.authenticate()
   .then(() => {

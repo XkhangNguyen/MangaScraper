@@ -67,4 +67,5 @@ export default (sequelize) => {
 
   Chapter.hasMany(ChapterImage);
   ChapterImage.belongsTo(Chapter, { allowNull: false });
+
 }
