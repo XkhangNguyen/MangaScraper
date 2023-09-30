@@ -2,6 +2,7 @@
 // Function to save manga data to the database
 async function loadMangasFromDatabase(mangaService) {
   try {
+    console.log('Loading manga data from the database...');
 
     const mangasData = await mangaService.getAllManga();
 
@@ -29,11 +30,12 @@ async function loadMangasFromDatabase(mangaService) {
       })
     );
 
-
     console.log('Manga data loaded from the database.');
+
     return mangasJSON;
   } catch (error) {
     console.error('Error loading manga data from the database:', error.message);
+    process.exit(1);
   }
 }
 

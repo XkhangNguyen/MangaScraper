@@ -28,6 +28,7 @@ await sequelize.authenticate()
   })
   .catch((error) => {
     console.error('Unable to connect to the database:', error);
+    process.exit(1);
   });
 
 await sequelize.sync()
@@ -36,6 +37,7 @@ await sequelize.sync()
   })
   .catch((error) => {
     console.error('Error synchronizing database tables:', error);
+    process.exit(1);
   });
 
 export default sequelize;

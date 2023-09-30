@@ -122,32 +122,39 @@ class MangaService {
     }
 
     async updateMangaChapter(mangaData) {
-        const manga = await this.getMangaByTitle(mangaData.MangaTitle)
+        try {
+            const manga = await this.getMangaByTitle(mangaData.MangaTitle)
 
-        if (!manga) {
-            throw new Error('Manga not found');
-        }
-
-        const chapters = mangaData.Chapters;
-
-        for (const chapterData of chapters) {
-            const { ChapterImageURLs, ChapterNumber, ChapterLink } = chapterData;
-
-            const newChapter = await this.models.chapter.create({
-                ChapterNumber,
-                ChapterLink,
-                mangaId: manga.id,
-            });
-
-            for (const chapterImageUrl of ChapterImageURLs) {
-                await this.models.chapter_image.create({
-                    chapterId: newChapter.id, // Associate the image with the chapter
-                    chapter_image_url: chapterImageUrl, // Include the image URL
-                });
+            if (!manga) {
+                throw new Error('Manga not found');
             }
+
+            const chapters = mangaData.Chapters;
+
+            for (const chapterData of chapters) {
+                const { ChapterImageURLs, ChapterNumber, ChapterLink } = chapterData;
+
+                const newChapter = await this.models.chapter.create({
+                    ChapterNumber,
+                    ChapterLink,
+                    mangaId: manga.id,
+                });
+
+                for (const chapterImageUrl of ChapterImageURLs) {
+                    await this.models.chapter_image.create({
+                        chapterId: newChapter.id, // Associate the image with the chapter
+                        chapter_image_url: chapterImageUrl, // Include the image URL
+                    });
+                }
+            }
+
+            return manga;
+        }
+        catch (error) {
+            console.error('Error updating manga:', error);
+            throw error;
         }
 
-        return manga;
     }
 }
 
