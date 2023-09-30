@@ -22,17 +22,17 @@ export default (sequelize) => {
       allowNull: true,
       field: 'author',
     },
-  },{
-    timestamps:false,
+  }, {
+    timestamps: false,
   });
 
   const Genre = sequelize.define('genre', {
-    genre_name:{
-        type: DataTypes.STRING,
-        allowNull: false,
+    genre_name: {
+      type: DataTypes.STRING,
+      allowNull: false,
     },
-  },{
-    timestamps:false,
+  }, {
+    timestamps: false,
   });
 
   const Chapter = sequelize.define('chapter', {
@@ -46,21 +46,21 @@ export default (sequelize) => {
       allowNull: false,
       field: 'chapter_link',
     },
-  },{
-    timestamps:false,
+  }, {
+    timestamps: false,
   });
 
-  const ChapterImage = sequelize.define('chapter_image',{
-    chapter_image_url:{
+  const ChapterImage = sequelize.define('chapter_image', {
+    chapter_image_url: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-  },{
-    timestamps:false,
-  }); 
+  }, {
+    timestamps: false,
+  });
 
-  Genre.belongsToMany(Manga, {timestamps:false, through: 'manga_genre' });
-  Manga.belongsToMany(Genre, {timestamps:false, through: 'manga_genre' });
+  Genre.belongsToMany(Manga, { timestamps: false, through: 'manga_genre' });
+  Manga.belongsToMany(Genre, { timestamps: false, through: 'manga_genre' });
 
   Manga.hasMany(Chapter);
   Chapter.belongsTo(Manga, { allowNull: false });
