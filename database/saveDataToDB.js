@@ -7,13 +7,16 @@ async function saveMangasToDatabase(mangasData, mangaService) {
     // Loop through the scraped manga data and insert it into the database
     for (const mangaTitle in mangasData) {
       if (mangasData.hasOwnProperty(mangaTitle)) {
-        const manga = mangasData[mangaTitle];
 
-        if (!await mangaService.getMangaByTitle(manga.MangaTitle)) {
-          await mangaService.createManga(manga);
+        const mangaData = mangasData[mangaTitle];
+
+        let mangaToUpdate = await mangaService.getMangaByTitle(mangaData.MangaTitle);
+
+        if (!mangaToUpdate) {
+          mangaToUpdate = await mangaService.createManga(mangaData);
         }
 
-        await mangaService.updateMangaChapter(manga);
+        await mangaService.updateMangaChapter(mangaData, mangaToUpdate);
       }
     }
 
