@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "ssh": "ssh -i ~/.ssh/MangaAPIKey.pem -N -L 5432:mangadb.c1noggh3v7pq.ap-southeast-2.rds.amazonaws.com:5432 ec2-user@13.239.38.27 -v",
+    "sshWin": "ssh -i /Users/Admin/Keys/MangaAPIKey.pem -N -L 5432:mangadb.c1noggh3v7pq.ap-southeast-2.rds.amazonaws.com:5432 ec2-user@13.239.38.27 -v",
+    "sshMac": "ssh -i ~/.ssh/MangaAPIKey.pem -N -L 5432:mangadb.c1noggh3v7pq.ap-southeast-2.rds.amazonaws.com:5432 ec2-user@13.239.38.27 -v",
     "start": "node main.js"
   },
   "type": "module",
