@@ -121,11 +121,9 @@ class MangaService {
         }
     }
 
-    async updateMangaChapter(mangaData) {
+    async updateMangaChapter(mangaData, mangaToUpdate) {
         try {
-            const manga = await this.getMangaByTitle(mangaData.MangaTitle)
-
-            if (!manga) {
+            if (!mangaToUpdate) {
                 throw new Error('Manga not found');
             }
 
@@ -137,7 +135,7 @@ class MangaService {
                 const newChapter = await this.models.chapter.create({
                     ChapterNumber,
                     ChapterLink,
-                    mangaId: manga.id,
+                    mangaId: mangaToUpdate.id,
                 });
 
                 for (const chapterImageUrl of ChapterImageURLs) {
@@ -148,7 +146,7 @@ class MangaService {
                 }
             }
 
-            return manga;
+            return mangaToUpdate;
         }
         catch (error) {
             console.error('Error updating manga:', error);
