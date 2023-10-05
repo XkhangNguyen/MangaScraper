@@ -4,11 +4,12 @@ import { saveMangasToDatabase } from './database/saveDataToDB.js';
 import { loadMangasFromDatabase } from './database/loadDataFromDB.js';
 import { endService } from './service.js';
 
-const concurrencyLimit = 1;
+const concurrencyLimit = 2;
 const limit = pLimit(concurrencyLimit);
 
-const maxChaptersToScrape = 2;
-const maxMangaToScrape = 10;
+const maxChaptersToScrape = 3;
+const maxMangaToScrape = 2
+;
 const maxRetries = 3;
 
 const url = 'https://saytruyenmoi.com/';
@@ -92,13 +93,16 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                             ChapterLink: chapterLink,
                         };
                     }).get(),
+                    NumberOfChapters: 0,
                 };
 
                 await mangaPage.close();
 
                 // Load the scraped manga data and check if the manga has been scraped already
-                if (scrapedMangaData[mangaData.MangaTitle]) {
+                if (scrapedMangaData && scrapedMangaData[mangaData.MangaTitle]) {
                     console.log(`- Manga ${mangaData.MangaTitle} is already scraped. Checking for new chapters...`);
+                    
+                    mangaData.id = scrapedMangaData[mangaData.MangaTitle].id;
 
                     // Filter out already scraped chapters
                     mangaData.Chapters = mangaData.Chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].Chapters.some(chap => chap.ChapterNumber === chapter.ChapterNumber));
@@ -163,9 +167,12 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
 
                     if (chapterRetries === maxRetries) {
                         console.error(`Max retries (${maxRetries}) reached. Unable to scrape the chapter.`);
+                     
                         return null;
                     }
                 }
+
+                mangaData.NumberOfChapters = mangaData.Chapters.length + scrapedMangaData[mangaData.MangaTitle].NumberOfChapters;
 
                 console.log('~ Manga %s scraped successfully.', mangaData.MangaTitle);
 

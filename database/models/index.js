@@ -22,8 +22,14 @@ export default (sequelize) => {
       allowNull: true,
       field: 'author',
     },
+    NumberOfChapters:{
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'number_of_chapters',
+      defaultValue: 0,
+    }
   }, {
-    timestamps: false,
+    timestamps: true,
   });
 
   const Genre = sequelize.define('genre', {
@@ -47,7 +53,7 @@ export default (sequelize) => {
       field: 'chapter_link',
     },
   }, {
-    timestamps: false,
+    timestamps: true,
   });
 
   const ChapterImage = sequelize.define('chapter_image', {

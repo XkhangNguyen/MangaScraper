@@ -127,6 +127,10 @@ class MangaService {
                 throw new Error('Manga not found');
             }
 
+            mangaToUpdate.NumberOfChapters = mangaData.NumberOfChapters;
+
+            await mangaToUpdate.save();
+
             const chapters = mangaData.Chapters;
 
             for (const chapterData of chapters) {

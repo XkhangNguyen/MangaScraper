@@ -10,7 +10,6 @@ async function loadMangasFromDatabase(mangaService) {
       mangasData.map(async (manga) => {
         const genres = await mangaService.getGenreOfManga(manga.MangaTitle);
         const chapters = await mangaService.getChaptersOfManga(manga.MangaTitle);
-
         const chaptersWithImages = await Promise.all(chapters.map(async (chapter) => {
           const chapterNumber = chapter.ChapterNumber;
           const chapterLink = chapter.ChapterLink;
@@ -21,7 +20,6 @@ async function loadMangasFromDatabase(mangaService) {
             ChapterImageURLs: chapterImageURLs,
           };
         }));
-
         return {
           ...manga.toJSON(),
           Genres: genres.map((genre) => genre.genre_name),
@@ -31,7 +29,6 @@ async function loadMangasFromDatabase(mangaService) {
     );
 
     console.log('Manga data loaded from the database.');
-
     return mangasJSON;
   } catch (error) {
     console.error('Error loading manga data from the database:', error.message);
