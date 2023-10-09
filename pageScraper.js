@@ -8,7 +8,7 @@ const concurrencyLimit = 2;
 const limit = pLimit(concurrencyLimit);
 
 const maxChaptersToScrape = 3;
-const maxMangaToScrape = 2
+const maxMangaToScrape = 5;
 ;
 const maxRetries = 3;
 

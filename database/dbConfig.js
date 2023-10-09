@@ -7,9 +7,14 @@ dotenv.config();
 
 let sequelize;
 
-const environment = 'local';
+const environment = {
+  local:'Local',
+  dev: 'Dev',
+}
 
-if(process.env.NODE_ENV = environment){
+console.log("Connecting to database...")
+
+if(process.env.NODE_ENV === environment.local){
   sequelize = new Sequelize({
     dialect: 'postgres',
     host: process.env.DB_HOST_LOCAL,
@@ -20,7 +25,7 @@ if(process.env.NODE_ENV = environment){
     logging: false,
   });
 }
-else{
+else if (process.env.NODE_ENV === environment.dev) {
   sequelize = new Sequelize({
     dialect: 'postgres',
     host: process.env.DB_HOST_DEV,
@@ -42,7 +47,7 @@ Models(sequelize);
 
 await sequelize.authenticate()
   .then(() => {
-    console.log(environment + ' database connection has been established successfully.');
+    console.log(process.env.NODE_ENV + ' database connection has been established successfully.');
   })
   .catch((error) => {
     console.error('Unable to connect to the database:', error);
