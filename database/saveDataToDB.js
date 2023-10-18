@@ -4,21 +4,7 @@ async function saveMangasToDatabase(mangasData, mangaService) {
   try {
     console.log('Saving manga data to the database...');
 
-    // Loop through the scraped manga data and insert it into the database
-    for (const mangaTitle in mangasData) {
-      if (mangasData.hasOwnProperty(mangaTitle)) {
-
-        const mangaData = mangasData[mangaTitle];
-
-        let mangaToUpdate = await mangaService.getMangaByTitle(mangaData.MangaTitle);
-
-        if (!mangaToUpdate) {
-          mangaToUpdate = await mangaService.createManga(mangaData);
-        }
-
-        await mangaService.updateMangaChapter(mangaData, mangaToUpdate);
-      }
-    }
+    await mangaService.createMangas(mangasData);
 
     console.log('Manga data saved to the database.');
   } catch (error) {

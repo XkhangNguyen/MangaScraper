@@ -1,8 +1,7 @@
-import Models from '../models/index.js';
 
 class MangaService {
     constructor(sequelize) {
-        Models(sequelize);
+        this.sequelize = sequelize;
         this.models = sequelize.models;
     }
 
@@ -84,39 +83,65 @@ class MangaService {
         }
     }
 
-
-
-    async createManga(mangaData) {
+    async createMangas(mangaDataArray) {
+        let transaction;
+        
         try {
-            // Extract genre names from the mangaData object
-            const { Genres, ...mangaInfo } = mangaData;
+            // Start a transaction
+            transaction = await this.sequelize.transaction();
+    
+            const mangaIds = mangaDataArray.map((mangaData) => mangaData.id);
+    
+            // Find existing manga ids in the database within the transaction
+            const existingMangaIds = (await this.models.manga.findAll({
+                where: { id: mangaIds },
+                attributes: ['id'],
+            })).map((manga) => manga.id);
+    
+            // Filter out manga data for ids that don't already exist
+            const mangaDataToInsert = mangaDataArray.filter((mangaData) => {
+                return !existingMangaIds.includes(mangaData.id);
+            });
+    
+            // Perform a bulk insert of manga records within the transaction
+            const mangaRecords = await this.models.manga.bulkCreate(mangaDataToInsert, { transaction });
+            
+            // map manga record by its title
+            const mangaToTitleMap = new Map(mangaRecords.map((mangaRecord) => [mangaRecord.MangaTitle, mangaRecord]));
 
-            // Find or create the manga record
-            const manga = await this.models.manga.create(mangaInfo);
+            // Create manga-genre associations within the transaction
+            const mangaGenreAsso = [];
 
-            // If genres were provided, create or associate them
-            if (Genres && Genres.length > 0) {
-                const genreRecords = await Promise.all(
-                    Genres.map(async (genreName) => {
-                        // Find or create the genre based on its name
-                        const [genre] = await this.models.genre.findOrCreate({
-                            where: { genre_name: genreName },
-                        });
-
-                        // Associate the genre with the manga
-                        await manga.addGenre(genre);
-
-                        return genre;
-                    })
-                );
-
-                manga.setGenres(genreRecords); // Set genres for the manga
-            }
-
-            return manga;
-
+            // find all genre records and map each record by its genre name
+            const allGenres = new Map();
+            (await this.models.genre.findAll({ transaction })).forEach((genre) => {
+                allGenres.set(genre.genre_name, genre);
+            });
+                
+            mangaDataToInsert.forEach((mangaData) => {
+                const matchedManga = mangaToTitleMap.get(mangaData.MangaTitle);
+    
+                if (mangaData.Genres && mangaData.Genres.length > 0) {
+                    for (const genre of mangaData.Genres) {  
+                        mangaGenreAsso.push({ mangaId: matchedManga.id, genreId: allGenres.get(genre).id });
+                    }
+                }
+            });
+    
+            // Perform a bulk insert for manga-genre associations within the transaction
+            await this.models.manga_genre.bulkCreate(mangaGenreAsso, { transaction });
+    
+            // Commit the transaction
+            await transaction.commit();
+    
+            return mangaGenreAsso;
         } catch (error) {
-            console.error('Error creating manga:', error);
+            // Rollback the transaction in case of an error
+            if (transaction) {
+                await transaction.rollback();
+            }
+    
+            console.error('Error creating mangas:', error);
             throw error;
         }
     }

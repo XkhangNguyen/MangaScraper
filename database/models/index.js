@@ -56,6 +56,10 @@ export default (sequelize) => {
     timestamps: true,
   });
 
+  const MangaGenre = sequelize.define('manga_genre',{
+
+  });
+
   const ChapterImage = sequelize.define('chapter_image', {
     chapter_image_url: {
       type: DataTypes.STRING,
@@ -65,8 +69,8 @@ export default (sequelize) => {
     timestamps: false,
   });
 
-  Genre.belongsToMany(Manga, { timestamps: false, through: 'manga_genre' });
-  Manga.belongsToMany(Genre, { timestamps: false, through: 'manga_genre' });
+  Genre.belongsToMany(Manga, { timestamps: false, through: MangaGenre });
+  Manga.belongsToMany(Genre, { timestamps: false, through: MangaGenre });
 
   Manga.hasMany(Chapter);
   Chapter.belongsTo(Manga, { allowNull: false });

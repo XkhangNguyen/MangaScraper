@@ -4,30 +4,48 @@ import { saveMangasToDatabase } from './database/saveDataToDB.js';
 import { loadMangasFromDatabase } from './database/loadDataFromDB.js';
 import { endService } from './service.js';
 
-const concurrencyLimit = 2;
+const concurrencyLimit = 1;
 const limit = pLimit(concurrencyLimit);
 
-const maxChaptersToScrape = 3;
-const maxMangaToScrape = 5;
+const maxChaptersToScrape = 1;
+const maxMangaToScrape = 2;
 ;
-const maxRetries = 3;
+const maxRetries = 5;
 
-const url = 'https://saytruyenmoi.com/';
-const mangaLinksSelector = '.manga-content .page-item-detail > div:first-of-type a';
-const mangaTitleSelector = '.post-title > h1';
-const mangaDescriptionSelector = '.description-summary p';
-const coverImageUrlSelector = '.summary_image img';
-const authorSelector = '.tab-summary .post-content > div:nth-child(5) > div:nth-child(2)';
-const genresSelector = '.tab-summary .post-content > div:nth-child(8) a';
-const chaptersSelector = '.list-item.box-list-chapter.limit-height li a';
-const chapterImageURLsSelector = '.page-break > img';
+const extensions = {
+    saytruyen: {
+        url : 'https://saytruyenmoi.com/',
+        mangaLinksSelector : '.manga-content .page-item-detail > div:first-of-type a',
+        mangaTitleSelector : '.post-title > h1',
+        mangaDescriptionSelector : '.description-summary p',
+        coverImageUrlSelector : '.summary_image img',
+        authorSelector : '.tab-summary .post-content > div:nth-child(5) > div:nth-child(2)',
+        genresSelector : '.tab-summary .post-content > div:nth-child(8) a',
+        chaptersSelector : '.list-item.box-list-chapter.limit-height li a',
+        chapterImageURLsSelector : '.page-break > img',
+    },
+    phetruyen: {
+        url : 'https://phetruyen.net/',
+        mangaLinksSelector : '#main_homepage .book_info h3 a',
+        mangaTitleSelector : '.book_info .book_other h1',
+        mangaDescriptionSelector : '.story-detail-info.detail-content p',
+        coverImageUrlSelector : '.book_info .book_avatar img',
+        authorSelector : '.book_info .book_other .author.row > p:nth-child(2)',
+        genresSelector : '.book_info .book_other .list01 li a',
+        chaptersSelector : '.list_chapter > div > div a',
+        chapterImageURLsSelector : '.page-break > img',
+    },
+}
+
+const extension = extensions.phetruyen;
+
 
 const mangaScraperObject = {
 
     async scraper(mainBrowser, service) {
         const scrapedMangaData = convertToObject(await loadMangasFromDatabase(service));
 
-        const pageUrls = await fetchWebsiteUrls(url, mainBrowser);
+        const pageUrls = await fetchWebsiteUrls(extension.url, mainBrowser);
 
         const tasks = pageUrls.map(link => scrapeChapterDetailsFromLink(link, mainBrowser, scrapedMangaData));
 
@@ -43,6 +61,7 @@ const mangaScraperObject = {
 
 async function fetchWebsiteUrls(pageUrl, browser) {
     let page = await browser.newPage();
+
     await page.setViewport({ width: 1366, height: 768 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36');
     await page.setExtraHTTPHeaders({
@@ -59,7 +78,7 @@ async function fetchWebsiteUrls(pageUrl, browser) {
     console.log(`Navigated to ${pageUrl}`);
     const $a = load(pageContent);
 
-    return $a(mangaLinksSelector)
+    return $a(extension.mangaLinksSelector)
         .map((index, el) => $a(el).attr('href')).get()
         .slice(0, maxMangaToScrape);
 }
@@ -79,13 +98,14 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
 
                 console.log(`Navigated to ${link}...`);
 
+
                 const mangaData = {
-                    MangaTitle: $b(mangaTitleSelector).text(),
-                    MangaDescription: $b(mangaDescriptionSelector).text(),
-                    CoverImageUrl: $b(coverImageUrlSelector).attr('src'),
-                    Author: $b(authorSelector).text(),
-                    Genres: $b(genresSelector).map((index, el) => $b(el).text()).get(),
-                    Chapters: $b(chaptersSelector).map((index, el) => {
+                    MangaTitle: $b(extension.mangaTitleSelector).text(),
+                    MangaDescription: $b(extension.mangaDescriptionSelector).text(),
+                    CoverImageUrl: $b(extension.coverImageUrlSelector).attr('src'),
+                    Author: $b(extension.authorSelector).text(),
+                    Genres: $b(extension.genresSelector).map((index, el) => $b(el).text()).get(),
+                    Chapters: $b(extension.chaptersSelector).map((index, el) => {
                         const chapterNumber = $b(el).text();
                         const chapterLink = $b(el).attr('href');
                         return {
@@ -95,6 +115,10 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                     }).get(),
                     NumberOfChapters: 0,
                 };
+
+                if (mangaData.Author.trim() === '') {
+                    mangaData.Author = 'Đang cập nhật';
+                }
 
                 await mangaPage.close();
 
@@ -142,7 +166,7 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                             const chapterHtmlContent = await chapterPage.content();
                             const $c = load(chapterHtmlContent);
 
-                            const chapterImageURLs = $c(chapterImageURLsSelector).map((index, el) => $c(el).attr('src')).get();
+                            const chapterImageURLs = $c(extension.chapterImageURLsSelector).map((index, el) => $c(el).attr('src')).get();
 
                             await chapterPage.close();
 
