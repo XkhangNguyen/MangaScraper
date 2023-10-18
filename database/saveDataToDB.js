@@ -6,6 +6,8 @@ async function saveMangasToDatabase(mangasData, mangaService) {
 
     await mangaService.createMangas(mangasData);
 
+    await mangaService.updateMangas(mangasData);
+
     console.log('Manga data saved to the database.');
   } catch (error) {
     console.error('Error saving manga data to the database:', error.message);

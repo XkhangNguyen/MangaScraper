@@ -22,12 +22,6 @@ export default (sequelize) => {
       allowNull: true,
       field: 'author',
     },
-    NumberOfChapters:{
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: 'number_of_chapters',
-      defaultValue: 0,
-    }
   }, {
     timestamps: true,
   });

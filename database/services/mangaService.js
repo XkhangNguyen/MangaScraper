@@ -117,7 +117,7 @@ class MangaService {
             (await this.models.genre.findAll({ transaction })).forEach((genre) => {
                 allGenres.set(genre.genre_name, genre);
             });
-                
+
             mangaDataToInsert.forEach((mangaData) => {
                 const matchedManga = mangaToTitleMap.get(mangaData.MangaTitle);
     
@@ -143,6 +143,37 @@ class MangaService {
     
             console.error('Error creating mangas:', error);
             throw error;
+        }
+    }
+
+    async updateMangas(mangasToUpdate){
+        let transaction;
+
+        try{
+            // Start a transaction
+            transaction = await this.sequelize.transaction();
+
+            const chaptersToUpdate = []
+
+            mangasToUpdate.forEach((manga) => {
+                manga.Chapters.forEach((chapter) => {
+                    chaptersToUpdate.push({ ...chapter, mangaId: manga.id });
+                });
+            });
+
+            await this.models.chapter.bulkCreate(chaptersToUpdate, {transaction});
+
+            // Commit the transaction
+            await transaction.commit();
+        }
+        catch (error) {
+            // Handle the error or log it
+            console.error('Error updating manga:', error);
+    
+            // Rollback the transaction
+            if (transaction) {
+                await transaction.rollback();
+            }
         }
     }
 

@@ -7,8 +7,8 @@ import { endService } from './service.js';
 const concurrencyLimit = 1;
 const limit = pLimit(concurrencyLimit);
 
-const maxChaptersToScrape = 1;
-const maxMangaToScrape = 2;
+const maxChaptersToScrape = 2;
+const maxMangaToScrape = 4;
 ;
 const maxRetries = 5;
 
@@ -113,7 +113,6 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                             ChapterLink: chapterLink,
                         };
                     }).get(),
-                    NumberOfChapters: 0,
                 };
 
                 if (mangaData.Author.trim() === '') {
@@ -195,8 +194,6 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                         return null;
                     }
                 }
-
-                mangaData.NumberOfChapters = mangaData.Chapters.length + scrapedMangaData[mangaData.MangaTitle].NumberOfChapters;
 
                 console.log('~ Manga %s scraped successfully.', mangaData.MangaTitle);
 
