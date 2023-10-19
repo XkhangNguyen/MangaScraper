@@ -43,7 +43,8 @@ const extension = extensions.phetruyen;
 const mangaScraperObject = {
 
     async scraper(mainBrowser, service) {
-        const scrapedMangaData = convertToObject(await loadMangasFromDatabase(service));
+
+        const scrapedMangaData = await loadMangasFromDatabase(service);
 
         const pageUrls = await fetchWebsiteUrls(extension.url, mainBrowser);
 
@@ -104,8 +105,8 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                     MangaDescription: $b(extension.mangaDescriptionSelector).text(),
                     CoverImageUrl: $b(extension.coverImageUrlSelector).attr('src'),
                     Author: $b(extension.authorSelector).text(),
-                    Genres: $b(extension.genresSelector).map((index, el) => $b(el).text()).get(),
-                    Chapters: $b(extension.chaptersSelector).map((index, el) => {
+                    genres: $b(extension.genresSelector).map((index, el) => $b(el).text()).get(),
+                    chapters: $b(extension.chaptersSelector).map((index, el) => {
                         const chapterNumber = $b(el).text();
                         const chapterLink = $b(el).attr('href');
                         return {
@@ -128,9 +129,9 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                     mangaData.id = scrapedMangaData[mangaData.MangaTitle].id;
 
                     // Filter out already scraped chapters
-                    mangaData.Chapters = mangaData.Chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].Chapters.some(chap => chap.ChapterNumber === chapter.ChapterNumber));
+                    mangaData.chapters = mangaData.chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].chapters.some(chap => chap.ChapterNumber === chapter.ChapterNumber));
 
-                    if (mangaData.Chapters.length === 0) {
+                    if (mangaData.chapters.length === 0) {
                         console.log(`-- No new chapters found for ${mangaData.MangaTitle}.`);
                         return null; // No new chapters to scrape
                     }
@@ -143,9 +144,9 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                 }
 
                 // Limit the number of chapters to scrape
-                mangaData.Chapters = mangaData.Chapters.slice(0, maxChaptersToScrape);
+                mangaData.chapters = mangaData.chapters.slice(0, maxChaptersToScrape);
 
-                const chapterURLs = mangaData.Chapters.map(chapter => chapter.ChapterLink);
+                const chapterURLs = mangaData.chapters.map(chapter => chapter.ChapterLink);
 
                 // Record scraped manga data except the chapters list for new manga in the scrapedMangaData
                 if (!scrapedMangaData[mangaData.MangaTitle]) {
@@ -170,15 +171,15 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                             await chapterPage.close();
 
                             // Find the corresponding chapter in mangaData.Chapters and add the image URLs
-                            const chapterIndex = mangaData.Chapters.findIndex(chapter => chapter.ChapterLink === chapUrl);
+                            const chapterIndex = mangaData.chapters.findIndex(chapter => chapter.ChapterLink === chapUrl);
 
                             if (chapterIndex !== -1) {
-                                mangaData.Chapters[chapterIndex].ChapterImageURLs = chapterImageURLs;
+                                mangaData.chapters[chapterIndex].ChapterImageURLs = chapterImageURLs;
                             }
 
-                            scrapedMangaData[mangaData.MangaTitle].Chapters.push(mangaData.Chapters[chapterIndex]);
+                            scrapedMangaData[mangaData.MangaTitle].chapters.push(mangaData.chapters[chapterIndex]);
 
-                            console.log('+ Scraped %s for %s, number of image links: %d', mangaData.Chapters[chapterIndex].ChapterNumber, mangaData.MangaTitle, chapterImageURLs.length);
+                            console.log('+ Scraped %s for %s, number of image links: %d', mangaData.chapters[chapterIndex].ChapterNumber, mangaData.MangaTitle, chapterImageURLs.length);
                             break;
                         }
                         catch (error) {
@@ -224,3 +225,4 @@ function convertToObject(data) {
 }
 
 export { mangaScraperObject };
+    

@@ -6,8 +6,38 @@ class MangaService {
     }
 
     async getAllManga() {
-        return await this.models.manga.findAll();
+        return await this.models.manga.findAll()
     }
+
+    async getAllMangaAsJSONObject() {
+        const mangaRecords = await this.models.manga.findAll({
+          include: [
+            {
+              model: this.models.genre,
+              attributes: ['genre_name'],
+              through: {
+                attributes: []
+              },
+            },
+            {
+              model: this.models.chapter,
+              attributes: ['ChapterNumber', 'ChapterLink'],
+            }
+          ]
+        });
+      
+        const mangaData = {};
+      
+        mangaRecords.forEach((mangaRecord) => {
+          const mangaJSON = mangaRecord.toJSON();
+          mangaData[mangaJSON.MangaTitle] = mangaJSON;
+        });
+      
+        return mangaData; // Move the return statement here, outside the forEach loop
+      }
+      
+
+    
 
     async getMangaByTitle(mangaTitle) {
         return await this.models.manga.findOne({ where: { title: mangaTitle } });
@@ -121,8 +151,8 @@ class MangaService {
             mangaDataToInsert.forEach((mangaData) => {
                 const matchedManga = mangaToTitleMap.get(mangaData.MangaTitle);
     
-                if (mangaData.Genres && mangaData.Genres.length > 0) {
-                    for (const genre of mangaData.Genres) {  
+                if (mangaData.genres && mangaData.genres.length > 0) {
+                    for (const genre of mangaData.genres) {  
                         mangaGenreAsso.push({ mangaId: matchedManga.id, genreId: allGenres.get(genre).id });
                     }
                 }
@@ -156,7 +186,7 @@ class MangaService {
             const chaptersToUpdate = []
 
             mangasToUpdate.forEach((manga) => {
-                manga.Chapters.forEach((chapter) => {
+                manga.chapters.forEach((chapter) => {
                     chaptersToUpdate.push({ ...chapter, mangaId: manga.id });
                 });
             });
