@@ -145,13 +145,18 @@ class MangaService {
 
             // Perform a bulk insert of manga records within the transaction
             const mangaRecords = await this.models.manga.bulkCreate(mangaDataToInsert, { transaction });
-
-            if (mangaIds.every((id) => id === null)) {
-
-            }
-
-            // map manga record by its title
+            
             const mangaToTitleMap = new Map(mangaRecords.map((mangaRecord) => [mangaRecord.MangaTitle, mangaRecord]));
+
+                mangaDataArray = mangaDataArray.filter((mangaData) => {
+                    // If a matching manga record exists, assign its id to mangaData
+                    if (mangaToTitleMap.has(mangaData.MangaTitle)) {
+                        mangaData.id = mangaToTitleMap.get(mangaData.MangaTitle).id;
+                        console.log(mangaData)
+                        return true;
+                    }
+                    return false; // Return false for mangaData that doesn't have a matching record
+                });
 
             // Create manga-genre associations within the transaction
             const mangaGenreAsso = [];
@@ -178,7 +183,9 @@ class MangaService {
             // Commit the transaction
             await transaction.commit();
 
-            return createdRecordIds;
+            //console.log(mangaDataToInsert)
+
+            return mangaDataArray;
         } catch (error) {
             // Rollback the transaction in case of an error
             if (transaction) {
@@ -190,8 +197,10 @@ class MangaService {
         }
     }
 
-    async updateMangas(mangasIdToUpdate) {
+    async updateMangas(mangasCreated) {
         let transaction;
+        
+        console.log(mangasCreated)
 
         try {
             // Start a transaction
@@ -200,9 +209,9 @@ class MangaService {
             const chaptersToUpdate = []
 
 
-            mangasIdToUpdate.forEach((id) => {
+            mangasCreated.forEach((manga) => {
                 manga.Chapters.forEach((chapter) => {
-                    chaptersToUpdate.push({ ...chapter, mangaId: id });
+                    chaptersToUpdate.push({ ...chapter, mangaId: manga.id });
                 });
             });
 
