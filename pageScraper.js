@@ -4,12 +4,12 @@ import { saveMangasToDatabase } from './database/saveDataToDB.js';
 import { loadMangasFromDatabase } from './database/loadDataFromDB.js';
 import { endService } from './service.js';
 
-const concurrencyLimit = 1;
+const concurrencyLimit = 2;
 const limit = pLimit(concurrencyLimit);
 
 const maxChaptersToScrape = 2;
 
-const maxMangaToScrape = 5;
+const maxMangaToScrape = 2;
 ;
 const maxRetries = 5;
 

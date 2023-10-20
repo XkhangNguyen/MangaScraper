@@ -50,7 +50,7 @@ export default (sequelize) => {
     timestamps: true,
   });
 
-  const MangaGenre = sequelize.define('manga_genre',{
+  const MangaGenre = sequelize.define('manga_genre', {
 
   });
 

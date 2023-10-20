@@ -5,10 +5,6 @@ class MangaService {
         this.models = sequelize.models;
     }
 
-    async getAllManga() {
-        return await this.models.manga.findAll()
-    }
-
     async getAllMangaAsJSONObject() {
         const mangaRecords = await this.models.manga.findAll({
             include: [
@@ -47,12 +43,6 @@ class MangaService {
         return mangaObject;
     }
 
-
-
-
-    async getMangaByTitle(mangaTitle) {
-        return await this.models.manga.findOne({ where: { title: mangaTitle } });
-    }
 
     async getGenreOfManga(mangaTitle) {
         try {
@@ -145,18 +135,17 @@ class MangaService {
 
             // Perform a bulk insert of manga records within the transaction
             const mangaRecords = await this.models.manga.bulkCreate(mangaDataToInsert, { transaction });
-            
+
             const mangaToTitleMap = new Map(mangaRecords.map((mangaRecord) => [mangaRecord.MangaTitle, mangaRecord]));
 
-                mangaDataArray = mangaDataArray.filter((mangaData) => {
-                    // If a matching manga record exists, assign its id to mangaData
-                    if (mangaToTitleMap.has(mangaData.MangaTitle)) {
-                        mangaData.id = mangaToTitleMap.get(mangaData.MangaTitle).id;
-                        console.log(mangaData)
-                        return true;
-                    }
-                    return false; // Return false for mangaData that doesn't have a matching record
-                });
+            mangaDataArray = mangaDataArray.filter((mangaData) => {
+                // If a matching manga record exists, assign its id to mangaData
+                if (mangaToTitleMap.has(mangaData.MangaTitle)) {
+                    mangaData.id = mangaToTitleMap.get(mangaData.MangaTitle).id;
+                    return true;
+                }
+                return false; // Return false for mangaData that doesn't have a matching record
+            });
 
             // Create manga-genre associations within the transaction
             const mangaGenreAsso = [];
@@ -199,23 +188,39 @@ class MangaService {
 
     async updateMangas(mangasCreated) {
         let transaction;
-        
-        console.log(mangasCreated)
 
         try {
             // Start a transaction
             transaction = await this.sequelize.transaction();
 
-            const chaptersToUpdate = []
+            const chaptersToUpdate = [];
 
+            const chapterImagesToUpdate = [];
+
+            let chapterLinkToChapterMap = new Map();
 
             mangasCreated.forEach((manga) => {
                 manga.Chapters.forEach((chapter) => {
                     chaptersToUpdate.push({ ...chapter, mangaId: manga.id });
+
+                    chapterLinkToChapterMap.set(chapter.ChapterLink, chapter)
                 });
             });
 
-            await this.models.chapter.bulkCreate(chaptersToUpdate, { transaction });
+            const updatedChapterRecords = await this.models.chapter.bulkCreate(chaptersToUpdate, { transaction });
+
+            updatedChapterRecords.forEach((record) => {
+                const matchedChapter = chapterLinkToChapterMap.get(record.ChapterLink);
+                matchedChapter.ChapterImageURLs.forEach((url) => {
+                    chapterImagesToUpdate.push({
+                        chapterId: record.id,
+                        chapter_image_url: url,
+                    });
+                })
+            });
+
+            await this.models.chapter_image.bulkCreate(chapterImagesToUpdate, { transaction });
+
 
             // Commit the transaction
             await transaction.commit();
@@ -229,45 +234,6 @@ class MangaService {
                 await transaction.rollback();
             }
         }
-    }
-
-    async updateMangaChapter(mangaData, mangaToUpdate) {
-        try {
-            if (!mangaToUpdate) {
-                throw new Error('Manga not found');
-            }
-            console.log(mangaToUpdate)
-
-            mangaToUpdate.NumberOfChapters = mangaData.NumberOfChapters;
-
-            await mangaToUpdate.save();
-
-            const chapters = mangaData.Chapters;
-
-            for (const chapterData of chapters) {
-                const { ChapterImageURLs, ChapterNumber, ChapterLink } = chapterData;
-
-                const newChapter = await this.models.chapter.create({
-                    ChapterNumber,
-                    ChapterLink,
-                    mangaId: mangaToUpdate.id,
-                });
-
-                for (const chapterImageUrl of ChapterImageURLs) {
-                    await this.models.chapter_image.create({
-                        chapterId: newChapter.id, // Associate the image with the chapter
-                        chapter_image_url: chapterImageUrl, // Include the image URL
-                    });
-                }
-            }
-
-            return mangaToUpdate;
-        }
-        catch (error) {
-            console.error('Error updating manga:', error);
-            throw error;
-        }
-
     }
 }
 
