@@ -4,9 +4,9 @@ async function saveMangasToDatabase(mangasData, mangaService) {
   try {
     console.log('Saving manga data to the database...');
 
-    await mangaService.createMangas(mangasData);
+    const mangaIdsCreated = await mangaService.createMangas(mangasData);
 
-    await mangaService.updateMangas(mangasData);
+    await mangaService.updateMangas(mangaIdsCreated);
 
     console.log('Manga data saved to the database.');
   } catch (error) {

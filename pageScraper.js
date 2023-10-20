@@ -8,32 +8,33 @@ const concurrencyLimit = 1;
 const limit = pLimit(concurrencyLimit);
 
 const maxChaptersToScrape = 2;
-const maxMangaToScrape = 4;
+
+const maxMangaToScrape = 2;
 ;
 const maxRetries = 5;
 
 const extensions = {
     saytruyen: {
-        url : 'https://saytruyenmoi.com/',
-        mangaLinksSelector : '.manga-content .page-item-detail > div:first-of-type a',
-        mangaTitleSelector : '.post-title > h1',
-        mangaDescriptionSelector : '.description-summary p',
-        coverImageUrlSelector : '.summary_image img',
-        authorSelector : '.tab-summary .post-content > div:nth-child(5) > div:nth-child(2)',
-        genresSelector : '.tab-summary .post-content > div:nth-child(8) a',
-        chaptersSelector : '.list-item.box-list-chapter.limit-height li a',
-        chapterImageURLsSelector : '.page-break > img',
+        url: 'https://saytruyenmoi.com/',
+        mangaLinksSelector: '.manga-content .page-item-detail > div:first-of-type a',
+        mangaTitleSelector: '.post-title > h1',
+        mangaDescriptionSelector: '.description-summary p',
+        coverImageUrlSelector: '.summary_image img',
+        authorSelector: '.tab-summary .post-content > div:nth-child(5) > div:nth-child(2)',
+        genresSelector: '.tab-summary .post-content > div:nth-child(8) a',
+        chaptersSelector: '.list-item.box-list-chapter.limit-height li a',
+        chapterImageURLsSelector: '.page-break > img',
     },
     phetruyen: {
-        url : 'https://phetruyen.net/',
-        mangaLinksSelector : '#main_homepage .book_info h3 a',
-        mangaTitleSelector : '.book_info .book_other h1',
-        mangaDescriptionSelector : '.story-detail-info.detail-content p',
-        coverImageUrlSelector : '.book_info .book_avatar img',
-        authorSelector : '.book_info .book_other .author.row > p:nth-child(2)',
-        genresSelector : '.book_info .book_other .list01 li a',
-        chaptersSelector : '.list_chapter > div > div a',
-        chapterImageURLsSelector : '.page-break > img',
+        url: 'https://phetruyen.net/',
+        mangaLinksSelector: '#main_homepage .book_info h3 a',
+        mangaTitleSelector: '.book_info .book_other h1',
+        mangaDescriptionSelector: '.story-detail-info.detail-content p',
+        coverImageUrlSelector: '.book_info .book_avatar img',
+        authorSelector: '.book_info .book_other .author.row > p:nth-child(2)',
+        genresSelector: '.book_info .book_other .list01 li a',
+        chaptersSelector: '.list_chapter > div > div a',
+        chapterImageURLsSelector: '.page-break > img',
     },
 }
 
@@ -105,8 +106,8 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                     MangaDescription: $b(extension.mangaDescriptionSelector).text(),
                     CoverImageUrl: $b(extension.coverImageUrlSelector).attr('src'),
                     Author: $b(extension.authorSelector).text(),
-                    genres: $b(extension.genresSelector).map((index, el) => $b(el).text()).get(),
-                    chapters: $b(extension.chaptersSelector).map((index, el) => {
+                    Genres: $b(extension.genresSelector).map((index, el) => $b(el).text()).get(),
+                    Chapters: $b(extension.chaptersSelector).map((index, el) => {
                         const chapterNumber = $b(el).text();
                         const chapterLink = $b(el).attr('href');
                         return {
@@ -125,13 +126,13 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                 // Load the scraped manga data and check if the manga has been scraped already
                 if (scrapedMangaData && scrapedMangaData[mangaData.MangaTitle]) {
                     console.log(`- Manga ${mangaData.MangaTitle} is already scraped. Checking for new chapters...`);
-                    
+
                     mangaData.id = scrapedMangaData[mangaData.MangaTitle].id;
 
                     // Filter out already scraped chapters
-                    mangaData.chapters = mangaData.chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].chapters.some(chap => chap.ChapterNumber === chapter.ChapterNumber));
+                    mangaData.Chapters = mangaData.Chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].Chapters.some(chap => chap.ChapterNumber === chapter.ChapterNumber));
 
-                    if (mangaData.chapters.length === 0) {
+                    if (mangaData.Chapters.length === 0) {
                         console.log(`-- No new chapters found for ${mangaData.MangaTitle}.`);
                         return null; // No new chapters to scrape
                     }
@@ -144,9 +145,9 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                 }
 
                 // Limit the number of chapters to scrape
-                mangaData.chapters = mangaData.chapters.slice(0, maxChaptersToScrape);
+                mangaData.Chapters = mangaData.Chapters.slice(0, maxChaptersToScrape);
 
-                const chapterURLs = mangaData.chapters.map(chapter => chapter.ChapterLink);
+                const chapterURLs = mangaData.Chapters.map(chapter => chapter.ChapterLink);
 
                 // Record scraped manga data except the chapters list for new manga in the scrapedMangaData
                 if (!scrapedMangaData[mangaData.MangaTitle]) {
@@ -171,15 +172,15 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                             await chapterPage.close();
 
                             // Find the corresponding chapter in mangaData.Chapters and add the image URLs
-                            const chapterIndex = mangaData.chapters.findIndex(chapter => chapter.ChapterLink === chapUrl);
+                            const chapterIndex = mangaData.Chapters.findIndex(chapter => chapter.ChapterLink === chapUrl);
 
                             if (chapterIndex !== -1) {
-                                mangaData.chapters[chapterIndex].ChapterImageURLs = chapterImageURLs;
+                                mangaData.Chapters[chapterIndex].ChapterImageURLs = chapterImageURLs;
                             }
 
-                            scrapedMangaData[mangaData.MangaTitle].chapters.push(mangaData.chapters[chapterIndex]);
+                            scrapedMangaData[mangaData.MangaTitle].Chapters.push(mangaData.Chapters[chapterIndex]);
 
-                            console.log('+ Scraped %s for %s, number of image links: %d', mangaData.chapters[chapterIndex].ChapterNumber, mangaData.MangaTitle, chapterImageURLs.length);
+                            console.log('+ Scraped %s for %s, number of image links: %d', mangaData.Chapters[chapterIndex].ChapterNumber, mangaData.MangaTitle, chapterImageURLs.length);
                             break;
                         }
                         catch (error) {
@@ -191,7 +192,7 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
 
                     if (chapterRetries === maxRetries) {
                         console.error(`Max retries (${maxRetries}) reached. Unable to scrape the chapter.`);
-                     
+
                         return null;
                     }
                 }
@@ -225,4 +226,3 @@ function convertToObject(data) {
 }
 
 export { mangaScraperObject };
-    

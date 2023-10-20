@@ -11,33 +11,44 @@ class MangaService {
 
     async getAllMangaAsJSONObject() {
         const mangaRecords = await this.models.manga.findAll({
-          include: [
-            {
-              model: this.models.genre,
-              attributes: ['genre_name'],
-              through: {
-                attributes: []
-              },
-            },
-            {
-              model: this.models.chapter,
-              attributes: ['ChapterNumber', 'ChapterLink'],
-            }
-          ]
+            include: [
+                {
+                    model: this.models.genre,
+                    attributes: ['genre_name'],
+                    through: {
+                        attributes: []
+                    },
+                },
+                {
+                    model: this.models.chapter,
+                    attributes: ['ChapterNumber', 'ChapterLink'],
+                }
+            ]
         });
-      
-        const mangaData = {};
-      
-        mangaRecords.forEach((mangaRecord) => {
-          const mangaJSON = mangaRecord.toJSON();
-          mangaData[mangaJSON.MangaTitle] = mangaJSON;
-        });
-      
-        return mangaData; // Move the return statement here, outside the forEach loop
-      }
-      
 
-    
+        const mangaData = mangaRecords.map((mangaRecord) => {
+            const mangaJSON = mangaRecord.toJSON();
+
+            // Rename "genres" to "Genres"
+            mangaJSON.Genres = mangaJSON.genres;
+            delete mangaJSON.genres;
+
+            // Rename "chapters" to "Chapters"
+            mangaJSON.Chapters = mangaJSON.chapters;
+            delete mangaJSON.chapters;
+
+            // Return the modified JSON
+            return { [mangaJSON.MangaTitle]: mangaJSON };
+        });
+
+        // Convert the array of objects to a single object
+        const mangaObject = Object.assign({}, ...mangaData);
+
+        return mangaObject;
+    }
+
+
+
 
     async getMangaByTitle(mangaTitle) {
         return await this.models.manga.findOne({ where: { title: mangaTitle } });
@@ -48,7 +59,7 @@ class MangaService {
             // Find the manga record by title
             const manga = await this.models.manga.findOne({
                 where: { title: mangaTitle },
-                include: [this.models.genre], // Include the associated genre
+                include: [this.models.genre],
             });
 
 
@@ -59,7 +70,6 @@ class MangaService {
             // Access the genre associated with the manga
             const genres = manga.genres;
 
-            // Return the genre data
             return genres;
         } catch (error) {
             console.error('Error getting genres of manga:', error.message);
@@ -115,27 +125,31 @@ class MangaService {
 
     async createMangas(mangaDataArray) {
         let transaction;
-        
+
         try {
             // Start a transaction
             transaction = await this.sequelize.transaction();
-    
+
             const mangaIds = mangaDataArray.map((mangaData) => mangaData.id);
-    
+
             // Find existing manga ids in the database within the transaction
             const existingMangaIds = (await this.models.manga.findAll({
                 where: { id: mangaIds },
                 attributes: ['id'],
             })).map((manga) => manga.id);
-    
+
             // Filter out manga data for ids that don't already exist
             const mangaDataToInsert = mangaDataArray.filter((mangaData) => {
                 return !existingMangaIds.includes(mangaData.id);
             });
-    
+
             // Perform a bulk insert of manga records within the transaction
             const mangaRecords = await this.models.manga.bulkCreate(mangaDataToInsert, { transaction });
-            
+
+            if (mangaIds.every((id) => id === null)) {
+
+            }
+
             // map manga record by its title
             const mangaToTitleMap = new Map(mangaRecords.map((mangaRecord) => [mangaRecord.MangaTitle, mangaRecord]));
 
@@ -150,48 +164,49 @@ class MangaService {
 
             mangaDataToInsert.forEach((mangaData) => {
                 const matchedManga = mangaToTitleMap.get(mangaData.MangaTitle);
-    
-                if (mangaData.genres && mangaData.genres.length > 0) {
-                    for (const genre of mangaData.genres) {  
+
+                if (mangaData.Genres && mangaData.Genres.length > 0) {
+                    for (const genre of mangaData.Genres) {
                         mangaGenreAsso.push({ mangaId: matchedManga.id, genreId: allGenres.get(genre).id });
                     }
                 }
             });
-    
+
             // Perform a bulk insert for manga-genre associations within the transaction
             await this.models.manga_genre.bulkCreate(mangaGenreAsso, { transaction });
-    
+
             // Commit the transaction
             await transaction.commit();
-    
-            return mangaGenreAsso;
+
+            return createdRecordIds;
         } catch (error) {
             // Rollback the transaction in case of an error
             if (transaction) {
                 await transaction.rollback();
             }
-    
+
             console.error('Error creating mangas:', error);
             throw error;
         }
     }
 
-    async updateMangas(mangasToUpdate){
+    async updateMangas(mangasIdToUpdate) {
         let transaction;
 
-        try{
+        try {
             // Start a transaction
             transaction = await this.sequelize.transaction();
 
             const chaptersToUpdate = []
 
-            mangasToUpdate.forEach((manga) => {
-                manga.chapters.forEach((chapter) => {
-                    chaptersToUpdate.push({ ...chapter, mangaId: manga.id });
+
+            mangasIdToUpdate.forEach((id) => {
+                manga.Chapters.forEach((chapter) => {
+                    chaptersToUpdate.push({ ...chapter, mangaId: id });
                 });
             });
 
-            await this.models.chapter.bulkCreate(chaptersToUpdate, {transaction});
+            await this.models.chapter.bulkCreate(chaptersToUpdate, { transaction });
 
             // Commit the transaction
             await transaction.commit();
@@ -199,7 +214,7 @@ class MangaService {
         catch (error) {
             // Handle the error or log it
             console.error('Error updating manga:', error);
-    
+
             // Rollback the transaction
             if (transaction) {
                 await transaction.rollback();
@@ -212,6 +227,7 @@ class MangaService {
             if (!mangaToUpdate) {
                 throw new Error('Manga not found');
             }
+            console.log(mangaToUpdate)
 
             mangaToUpdate.NumberOfChapters = mangaData.NumberOfChapters;
 
