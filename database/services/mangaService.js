@@ -91,22 +91,19 @@ class MangaService {
         }
     }
 
-    async getChapterImageURLsOfChapter(chapter) {
+    async getChapterImageURLsOfChapter(chapterId) {
         try {
-            // Find the chapter record by its ID, assuming chapter is a Sequelize instance
-            const chapterRecord = await chapter.reload({ include: 'chapter_images' });
+            // Find the chapter record by its ID
+            const chapterRecord = await this.models.chapter.findByPk(chapterId, {
+                include: 'chapter_image'
+            });
 
             if (!chapterRecord) {
                 throw new Error('Chapter not found');
             }
 
-            // Access the associated chapter_images
-            const chapterImages = chapterRecord.chapter_images;
+            return chapterRecord.chapter_image;
 
-            // Extract image URLs from the chapter_images
-            const imageUrls = chapterImages.map((image) => image.chapter_image_url);
-
-            return imageUrls;
         } catch (error) {
             console.error('Error getting chapter image URLs:', error.message);
             throw error;
@@ -211,12 +208,21 @@ class MangaService {
 
             updatedChapterRecords.forEach((record) => {
                 const matchedChapter = chapterLinkToChapterMap.get(record.ChapterLink);
-                matchedChapter.ChapterImageURLs.forEach((url) => {
-                    chapterImagesToUpdate.push({
-                        chapterId: record.id,
-                        chapter_image_url: url,
-                    });
+
+                let combinedURLsInChapter = '';
+
+                matchedChapter.ChapterImageURLs.forEach((url, index) => {
+                    if (index > 0) {
+                        combinedURLsInChapter += ';';
+                    }
+
+                    combinedURLsInChapter += url;
                 })
+
+                chapterImagesToUpdate.push({
+                    chapterId: record.id,
+                    chapter_image_urls: combinedURLsInChapter,
+                });
             });
 
             await this.models.chapter_image.bulkCreate(chapterImagesToUpdate, { transaction });

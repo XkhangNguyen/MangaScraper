@@ -55,8 +55,8 @@ export default (sequelize) => {
   });
 
   const ChapterImage = sequelize.define('chapter_image', {
-    chapter_image_url: {
-      type: DataTypes.STRING,
+    chapter_image_urls: {
+      type: DataTypes.TEXT,
       allowNull: false,
     },
   }, {
@@ -69,7 +69,7 @@ export default (sequelize) => {
   Manga.hasMany(Chapter);
   Chapter.belongsTo(Manga, { allowNull: false });
 
-  Chapter.hasMany(ChapterImage);
+  Chapter.hasOne(ChapterImage);
   ChapterImage.belongsTo(Chapter, { allowNull: false });
 
 }
