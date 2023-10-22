@@ -1,15 +1,15 @@
 import pLimit from 'p-limit';
 import { load } from "cheerio";
-import { saveMangasToDatabase } from './database/saveDataToDB.js';
-import { loadMangasFromDatabase } from './database/loadDataFromDB.js';
-import { endService } from './service.js';
+import { saveMangasToDatabase } from './database/saveDataToDB';
+import { loadMangasFromDatabase } from './database/loadDataFromDB';
+import { endService } from './service';
 
 const concurrencyLimit = 5;
 const limit = pLimit(concurrencyLimit);
 
-const maxChaptersToScrape = 2;
+const maxChaptersToScrape = 10;
 
-const maxMangaToScrape = 2;
+const maxMangaToScrape = 35;
 ;
 const maxRetries = 5;
 

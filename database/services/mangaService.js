@@ -1,4 +1,3 @@
-
 class MangaService {
     constructor(sequelize) {
         this.sequelize = sequelize;
@@ -43,53 +42,6 @@ class MangaService {
         return mangaObject;
     }
 
-
-    async getGenreOfManga(mangaTitle) {
-        try {
-            // Find the manga record by title
-            const manga = await this.models.manga.findOne({
-                where: { title: mangaTitle },
-                include: [this.models.genre],
-            });
-
-
-            if (!manga) {
-                throw new Error('Manga not found');
-            }
-
-            // Access the genre associated with the manga
-            const genres = manga.genres;
-
-            return genres;
-        } catch (error) {
-            console.error('Error getting genres of manga:', error.message);
-            throw error;
-        }
-    }
-
-    async getChaptersOfManga(mangaTitle) {
-        try {
-            const manga = await this.models.manga.findOne({
-                where: { title: mangaTitle },
-                include: [
-                    {
-                        model: this.models.chapter,
-                    },
-                ],
-            })
-
-            if (!manga) {
-                throw new Error('Manga not found');
-            }
-
-            const chapters = manga.chapters;
-
-            return chapters;
-        } catch (error) {
-            console.error('Error getting chapters of manga:', error.message);
-            throw error;
-        }
-    }
 
     async getChapterImageURLsOfChapter(chapterId) {
         try {

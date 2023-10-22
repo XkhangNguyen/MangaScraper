@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import Sequelize from 'sequelize';
-import Models from './models/index.js';
+import Models from './models/index';
 
 dotenv.config();
 
@@ -8,13 +8,13 @@ dotenv.config();
 let sequelize;
 
 const environment = {
-  local:'Local',
+  local: 'Local',
   dev: 'Dev',
 }
 
 console.log("Connecting to database...")
 
-if(process.env.NODE_ENV === environment.local){
+if (process.env.NODE_ENV === environment.local) {
   sequelize = new Sequelize({
     dialect: 'postgres',
     host: process.env.DB_HOST_LOCAL,

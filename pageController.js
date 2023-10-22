@@ -1,4 +1,4 @@
-import { mangaScraperObject } from './pageScraper.js';
+import { mangaScraperObject } from './pageScraper';
 
 async function scrapeAll(browserInstance, serviceInstance) {
 	let browser;

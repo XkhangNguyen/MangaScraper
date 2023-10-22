@@ -1,4 +1,4 @@
-import sequelize from './database/dbConfig.js';
+import sequelize from './database/dbConfig';
 
 async function resetTablesAndAutoIncrement() {
   try {
@@ -6,10 +6,10 @@ async function resetTablesAndAutoIncrement() {
 
     // Delete all records from the tables
     await sequelize.query('TRUNCATE "manga_genre"');
-    await models.genre.destroy({ where: {}});
-    await models.manga.destroy({ where: {}});
-    await models.chapter_image.destroy({ where: {}});
-    await models.chapter.destroy({ where: {}});
+    await models.genre.destroy({ where: {} });
+    await models.manga.destroy({ where: {} });
+    await models.chapter_image.destroy({ where: {} });
+    await models.chapter.destroy({ where: {} });
 
     // Reset the auto-increment counters
     await sequelize.query('ALTER SEQUENCE "mangas_id_seq" RESTART 1'); // Replace "mangas_id_seq" with your actual sequence name for the manga table

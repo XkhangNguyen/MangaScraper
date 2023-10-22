@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer-extra';
 import { load } from 'cheerio';
-import sequelize from './database/dbConfig.js';
+import sequelize from './database/dbConfig';
 
 (async () => {
     console.log(`Opening the browser...`);
@@ -29,7 +29,7 @@ import sequelize from './database/dbConfig.js';
 
     // Navigate to the target website
     await page.goto('https://phetruyen.net/'); // Replace with the URL of the website you want to scrape
-    
+
     console.log(`Navigated to link.`);
 
     // Get the HTML content of the page
