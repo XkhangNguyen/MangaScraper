@@ -130,7 +130,10 @@ async function scrapeChapterDetailsFromLink(link, browser, scrapedMangaData) {
                     mangaData.id = scrapedMangaData[mangaData.MangaTitle].id;
 
                     // Filter out already scraped chapters
-                    mangaData.Chapters = mangaData.Chapters.filter(chapter => !scrapedMangaData[mangaData.MangaTitle].Chapters.some(chap => chap.ChapterNumber === chapter.ChapterNumber));
+                    mangaData.Chapters = mangaData.Chapters
+                        .filter(chapter => !scrapedMangaData[mangaData.MangaTitle].Chapters
+                        .some(chap => chap.ChapterNumber === chapter.ChapterNumber))
+                        .reverse();
 
                     if (mangaData.Chapters.length === 0) {
                         console.log(`-- No new chapters found for ${mangaData.MangaTitle}.`);
